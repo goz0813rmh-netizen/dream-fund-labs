@@ -5,7 +5,7 @@
   --panel: #0f1523;
   --card: #131b2d;
   --line: #293650;
-  --text: #eef2ff;
+  --color-text: #eef2ff;
   --muted: #9ba8c8;
   --accent: #7387ff;
   --accent-soft: #1a2550;
@@ -18,7 +18,7 @@
 body {
   margin: 0;
   background: radial-gradient(circle at top right, #172142 0, var(--bg) 40%);
-  color: var(--text);
+  color: var(--color-text);
 }
 
 .app {
@@ -97,7 +97,7 @@ p {
 .action-list {
   margin: 0;
   padding-left: 18px;
-  color: var(--text);
+  color: var(--color-text);
 }
 
 .stack-list li,
