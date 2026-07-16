@@ -2,6 +2,13 @@
 
 初心者向けの個人投資研究アプリ。
 
+## Documentation
+
+- [Vision](/docs/VISION.md)
+- [Architecture](/docs/ARCHITECTURE.md)
+- [Backlog](/docs/BACKLOG.md)
+- [Decision Log](/docs/DECISIONS.md)
+
 ## v0.1
 
 - Dream20銘柄一覧
