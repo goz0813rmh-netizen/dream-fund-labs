@@ -14,8 +14,9 @@ function loadAll() {
 function saveAll(decisions) {
   try {
     localStorage.setItem(DECISIONS_STORAGE_KEY, JSON.stringify(decisions));
+    return true;
   } catch {
-    // localStorage unavailable or quota exceeded — skip persistence silently
+    return false;
   }
 }
 
@@ -79,7 +80,10 @@ export function createDecision(input) {
 
   const all = loadAll();
   all.push(decision);
-  saveAll(all);
+  const saved = saveAll(all);
+  if (!saved) {
+    return { ok: false, errors: ['判断記録を保存できませんでした'] };
+  }
 
   return { ok: true, decision };
 }

@@ -55,6 +55,8 @@ const result = createDecision({
 });
 // result.ok === true のとき result.decision に保存済み記録が入る
 // result.ok === false のとき result.errors にエラー文字列配列が入る
+//   バリデーション失敗例: { ok: false, errors: ['ticker は必須の文字列です'] }
+//   保存失敗例:           { ok: false, errors: ['判断記録を保存できませんでした'] }
 
 // 全件取得（新しい順）
 getDecisions();
