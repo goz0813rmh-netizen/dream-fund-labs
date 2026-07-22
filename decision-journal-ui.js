@@ -155,6 +155,7 @@ if (form) {
 
     const submitButton = document.createElement('button');
     submitButton.type = 'submit';
+    submitButton.className = 'reflection-submit';
     submitButton.textContent = '振り返りを保存する';
 
     actions.appendChild(cancelButton);
