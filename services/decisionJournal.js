@@ -55,6 +55,48 @@ function validate(input) {
   return errors;
 }
 
+function normalizeReflection(reflection) {
+  if (!reflection || typeof reflection !== 'object') {
+    return null;
+  }
+
+  const outcome = typeof reflection.outcome === 'string' ? reflection.outcome : '';
+  const learning = typeof reflection.learning === 'string' ? reflection.learning : '';
+  const reviewedAt = typeof reflection.reviewedAt === 'string' ? reflection.reviewedAt : null;
+
+  if (outcome === '' && learning === '' && !reviewedAt) {
+    return null;
+  }
+
+  return { outcome, learning, reviewedAt };
+}
+
+function normalizeDecision(decision) {
+  return {
+    ...decision,
+    risks: Array.isArray(decision?.risks) ? decision.risks : [],
+    reviewDate: decision?.reviewDate ?? null,
+    reflection: normalizeReflection(decision?.reflection),
+  };
+}
+
+function validateReflection(decisionId, input) {
+  const errors = [];
+
+  if (typeof decisionId !== 'string' || decisionId.trim() === '') {
+    errors.push('decisionId は必須です');
+  }
+
+  const outcome = typeof input?.outcome === 'string' ? input.outcome.trim() : '';
+  const learning = typeof input?.learning === 'string' ? input.learning.trim() : '';
+
+  if (outcome === '' && learning === '') {
+    errors.push('その後どうなった？ か 次回に活かす学び のどちらかを入力してください');
+  }
+
+  return errors;
+}
+
 // --- public API ---
 
 /**
@@ -76,6 +118,7 @@ export function createDecision(input) {
     thesis:     input.thesis.trim(),
     risks:      Array.isArray(input.risks) ? input.risks : [],
     reviewDate: input.reviewDate ?? null,
+    reflection: null,
   };
 
   const all = loadAll();
@@ -89,11 +132,51 @@ export function createDecision(input) {
 }
 
 /**
+ * 判断記録へ振り返りを保存する。
+ * @param {string} decisionId
+ * @param {{ outcome?: string, learning?: string }} input
+ * @returns {{ ok: true, decision: object } | { ok: false, errors: string[] }}
+ */
+export function addReflection(decisionId, input) {
+  const errors = validateReflection(decisionId, input);
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+
+  const all = loadAll();
+  const index = all.findIndex(decision => decision.id === decisionId);
+
+  if (index === -1) {
+    return { ok: false, errors: ['対象の判断記録が見つかりません'] };
+  }
+
+  const updatedDecision = {
+    ...all[index],
+    reflection: {
+      outcome: typeof input?.outcome === 'string' ? input.outcome.trim() : '',
+      learning: typeof input?.learning === 'string' ? input.learning.trim() : '',
+      reviewedAt: new Date().toISOString(),
+    },
+  };
+
+  all[index] = updatedDecision;
+
+  if (!saveAll(all)) {
+    return { ok: false, errors: ['振り返りを保存できませんでした'] };
+  }
+
+  return { ok: true, decision: normalizeDecision(updatedDecision) };
+}
+
+/**
  * 全件取得（新しい順）。
  * @returns {object[]}
  */
 export function getDecisions() {
-  return loadAll().slice().reverse();
+  return loadAll()
+    .map(normalizeDecision)
+    .slice()
+    .reverse();
 }
 
 /**
@@ -102,7 +185,8 @@ export function getDecisions() {
  * @returns {object|null}
  */
 export function getDecision(id) {
-  return loadAll().find(d => d.id === id) ?? null;
+  const decision = loadAll().find(d => d.id === id);
+  return decision ? normalizeDecision(decision) : null;
 }
 
 /**
@@ -114,5 +198,6 @@ export function getDecisionsByTicker(ticker) {
   const upper = String(ticker).trim().toUpperCase();
   return loadAll()
     .filter(d => d.ticker === upper)
+    .map(normalizeDecision)
     .reverse();
 }

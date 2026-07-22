@@ -1,4 +1,4 @@
-import { createDecision, getDecisions } from './services/decisionJournal.js';
+import { addReflection, createDecision, getDecisions } from './services/decisionJournal.js';
 
 const form = document.querySelector('#decisionForm');
 
@@ -15,6 +15,7 @@ if (form) {
   const listEl = document.querySelector('#decisionList');
   const emptyEl = document.querySelector('#decisionEmpty');
   const countEl = document.querySelector('#decisionCount');
+  let openReflectionId = null;
 
   const parseRisks = (raw) => String(raw)
     .split(/[\n,]/)
@@ -26,6 +27,27 @@ if (form) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleDateString('ja-JP');
+  };
+
+  const getTodayKey = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const isReviewable = (decision) => {
+    if (typeof decision?.reviewDate !== 'string' || decision.reviewDate === '') {
+      return false;
+    }
+
+    const date = new Date(decision.reviewDate);
+    if (Number.isNaN(date.getTime())) {
+      return false;
+    }
+
+    return decision.reviewDate <= getTodayKey();
   };
 
   const clearMessages = () => {
@@ -62,6 +84,114 @@ if (form) {
     return field;
   };
 
+  const createReflectionPanel = (decision) => {
+    const reflection = document.createElement('section');
+    reflection.className = 'decision-reflection';
+
+    const title = document.createElement('p');
+    title.className = 'decision-reflection-title';
+    title.textContent = '振り返りメモ';
+    reflection.appendChild(title);
+
+    if (decision.reflection?.outcome) {
+      reflection.appendChild(createField('その後どうなった？', decision.reflection.outcome));
+    }
+
+    if (decision.reflection?.learning) {
+      reflection.appendChild(createField('次回に活かす学び', decision.reflection.learning));
+    }
+
+    reflection.appendChild(createField('振り返った日', toDisplayDate(decision.reflection?.reviewedAt)));
+
+    return reflection;
+  };
+
+  const createReflectionForm = (decision) => {
+    const formEl = document.createElement('form');
+    formEl.className = 'reflection-form';
+    formEl.noValidate = true;
+
+    const title = document.createElement('p');
+    title.className = 'reflection-form-title';
+    title.textContent = 'この判断を振り返る';
+    formEl.appendChild(title);
+
+    const outcomeLabel = document.createElement('label');
+    outcomeLabel.textContent = 'その後どうなった？';
+
+    const outcomeInput = document.createElement('textarea');
+    outcomeInput.name = 'outcome';
+    outcomeInput.rows = 3;
+    outcomeInput.placeholder = '例: 決算後も保有を続けられた / 途中で不安になって売った';
+    outcomeLabel.appendChild(outcomeInput);
+    formEl.appendChild(outcomeLabel);
+
+    const learningLabel = document.createElement('label');
+    learningLabel.textContent = '次回に活かす学び';
+
+    const learningInput = document.createElement('textarea');
+    learningInput.name = 'learning';
+    learningInput.rows = 2;
+    learningInput.placeholder = '例: 買う前に、どこまで待てるか決めておく';
+    learningLabel.appendChild(learningInput);
+    formEl.appendChild(learningLabel);
+
+    const formErrors = document.createElement('ul');
+    formErrors.className = 'decision-errors reflection-errors';
+    formErrors.hidden = true;
+    formEl.appendChild(formErrors);
+
+    const actions = document.createElement('div');
+    actions.className = 'reflection-actions';
+
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.className = 'reflection-cancel';
+    cancelButton.textContent = '閉じる';
+    cancelButton.addEventListener('click', () => {
+      openReflectionId = null;
+      renderList();
+    });
+
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.textContent = '振り返りを保存する';
+
+    actions.appendChild(cancelButton);
+    actions.appendChild(submitButton);
+    formEl.appendChild(actions);
+
+    formEl.addEventListener('submit', (event) => {
+      event.preventDefault();
+      clearMessages();
+
+      formErrors.innerHTML = '';
+      formErrors.hidden = true;
+
+      const result = addReflection(decision.id, {
+        outcome: outcomeInput.value,
+        learning: learningInput.value,
+      });
+
+      if (!result.ok) {
+        for (const error of result.errors) {
+          const li = document.createElement('li');
+          li.textContent = error;
+          formErrors.appendChild(li);
+        }
+        formErrors.hidden = false;
+        return;
+      }
+
+      openReflectionId = null;
+      successEl.textContent = '振り返りを保存しました。';
+      successEl.hidden = false;
+      renderList();
+    });
+
+    return formEl;
+  };
+
   const renderList = () => {
     const decisions = getDecisions();
 
@@ -91,6 +221,25 @@ if (form) {
       item.appendChild(createField('リスク', risks.length ? risks.join(' / ') : 'なし'));
       item.appendChild(createField('作成日時', toDisplayDate(decision.createdAt)));
       item.appendChild(createField('振り返り予定日', toDisplayDate(decision.reviewDate)));
+
+      if (decision.reflection) {
+        item.appendChild(createReflectionPanel(decision));
+      } else if (isReviewable(decision)) {
+        const reflectionButton = document.createElement('button');
+        reflectionButton.type = 'button';
+        reflectionButton.className = 'reflection-toggle';
+        reflectionButton.textContent = 'この判断を振り返る';
+        reflectionButton.addEventListener('click', () => {
+          clearMessages();
+          openReflectionId = decision.id;
+          renderList();
+        });
+        item.appendChild(reflectionButton);
+
+        if (openReflectionId === decision.id) {
+          item.appendChild(createReflectionForm(decision));
+        }
+      }
 
       listEl.appendChild(item);
     }
