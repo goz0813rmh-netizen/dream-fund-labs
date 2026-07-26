@@ -1,14 +1,31 @@
+function extractText(data){
+  if(typeof data?.output_text==='string'&&data.output_text.trim())return data.output_text.trim();
+  const parts=[];
+  for(const item of data?.output||[])for(const content of item?.content||[]){
+    if(typeof content?.text==='string'&&content.text.trim())parts.push(content.text.trim());
+    else if(typeof content?.text?.value==='string'&&content.text.value.trim())parts.push(content.text.value.trim());
+  }
+  return parts.join('\n\n').trim();
+}
+function localAdvice(message,budget){
+  const amountMatch=String(message).replace(/,/g,'').match(/(\d+(?:\.\d+)?)\s*(万円|千円|円)/);
+  const amount=amountMatch?Math.round(Number(amountMatch[1])*(amountMatch[2]==='万円'?10000:amountMatch[2]==='千円'?1000:1)):budget;
+  return `今回は${amount.toLocaleString('ja-JP')}円での買い方を考えます。\n\n少額で買い増す場合は、手数料と1株価格を先に確認し、予算内で買える銘柄だけを比較するのが現実的です。候補が決まっているなら銘柄名を入れてください。購入可能性と見送る理由を整理します。`;
+}
 export default async function handler(req,res){
   if(req.method!=='POST')return res.status(405).json({error:'POST only'});
-  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'AI is not connected yet'});
   const {message,monthlyBudget}=req.body||{};
-  if(!message||typeof message!=='string')return res.status(400).json({error:'Message is required'});
-  const prompt=`あなたは個人投資アプリ Dream Fund Labs の投資相談パートナー。ユーザー本人のための相談相手として答える。\n\nルール:\n- 相談文に具体的な予算があれば、それを月上限より優先する\n- Dream20に限定せず、市場全体から考える\n- 銘柄を挙げるなら、最新株価を確認できていない場合は断定しない\n- 予算内で何株買えるか、合計金額まで示す方向で答える\n- 短く、スマホで読みやすくする\n- 「投資は自己責任」など定型文を毎回長く書かない\n- まず相談意図を一文で捉え、その後に具体案を出す\n\n月の上限: ${Number(monthlyBudget)||5000}円\n相談: ${message}`;
+  if(!message||typeof message!=='string')return res.status(400).json({error:'相談内容を入力してください'});
+  const budget=Number(monthlyBudget)||5000;
+  if(!process.env.OPENAI_API_KEY)return res.status(200).json({answer:localAdvice(message,budget),fallback:true});
+  const prompt=`あなたは個人投資アプリ Dream Fund Labs の投資相談パートナーです。断定ではなく、比較と理由を短く示してください。\n月の上限: ${budget.toLocaleString('ja-JP')}円\n相談: ${message}`;
   try{
-    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${process.env.OPENAI_API_KEY}`},body:JSON.stringify({model:'gpt-5-mini',input:prompt,max_output_tokens:700})});
-    const data=await r.json();
-    if(!r.ok)return res.status(r.status).json({error:data?.error?.message||'AI request failed'});
-    const text=data.output_text||data.output?.flatMap(x=>x.content||[]).find(x=>x.type==='output_text')?.text;
-    return res.status(200).json({answer:text||'回答を作れませんでした。'});
-  }catch(e){return res.status(500).json({error:'AI connection failed'});}
+    const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${process.env.OPENAI_API_KEY}`},body:JSON.stringify({model:'gpt-5-mini',input:prompt,max_output_tokens:700})});
+    const data=await response.json();
+    if(!response.ok)return res.status(200).json({answer:localAdvice(message,budget),fallback:true});
+    const answer=extractText(data);
+    return res.status(200).json({answer:answer||localAdvice(message,budget),fallback:!answer});
+  }catch(error){
+    return res.status(200).json({answer:localAdvice(message,budget),fallback:true});
+  }
 }
