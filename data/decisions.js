@@ -12,5 +12,6 @@ export const VALID_ACTIONS = ['BUY', 'SELL', 'HOLD', 'WATCH'];
  *   thesis:     string   — 判断理由（必須）
  *   risks:      string[] — リスク一覧（未指定なら空配列）
  *   reviewDate: string|null — 振り返り予定日（未指定なら null）
+ *   reflection: { outcome: string, learning: string, reviewedAt: string } | null
  * }
  */
