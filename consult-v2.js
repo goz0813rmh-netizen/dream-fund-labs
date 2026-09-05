@@ -19,7 +19,9 @@
   };
 
   function getMonthlyBudget(){
-    const monthlyDefault=Number(localStorage.getItem('dfl-monthly-budget'))||5000;
+    const rawDefault=localStorage.getItem('dfl-monthly-budget');
+    const parsedDefault=Number(rawDefault);
+    const monthlyDefault=rawDefault===null||!Number.isFinite(parsedDefault)||parsedDefault<0?5000:Math.round(parsedDefault);
     const carryover=Math.max(0,Number(localStorage.getItem('dfl-investment-carryover'))||0);
     const now=new Date();
     const month=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
