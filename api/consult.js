@@ -1,9 +1,9 @@
 const REQUIRED_SECTIONS = [
-  '1. 結論',
-  '2. 根拠',
-  '3. リスク',
-  '4. 今月のおすすめアクション',
-  '5. Decision Journalへ残すべき内容',
+  '1. Portfolio Review',
+  '2. Business Quality',
+  '3. Opportunities',
+  '4. Valuation',
+  '5. Capital Allocation',
 ];
 
 function extractText(data) {
@@ -18,171 +18,93 @@ function extractText(data) {
   return parts.join('\n\n').trim();
 }
 
-function parseAmountFromMessage(message, budget) {
-  const amountMatch = String(message).replace(/,/g, '').match(/(\d+(?:\.\d+)?)\s*(万円|千円|円)/);
-  if (!amountMatch) return budget;
-  const unit = amountMatch[2] === '万円' ? 10000 : amountMatch[2] === '千円' ? 1000 : 1;
-  return Math.max(0, Math.round(Number(amountMatch[1]) * unit));
-}
-
 function formatYen(value) {
   return `${Math.round(value).toLocaleString('ja-JP')}円`;
 }
 
-function normalizeContext(raw, budget) {
+function normalizeContext(raw, availableAmount) {
   const dream20 = Array.isArray(raw?.dream20)
     ? raw.dream20
-        .map((item) => ({
+        .map(item => ({
           name: String(item?.name || '').trim(),
           ticker: String(item?.ticker || '').trim().toUpperCase(),
           type: String(item?.type || '').trim(),
           judge: String(item?.judge || '').trim(),
         }))
-        .filter((item) => item.name && item.ticker)
+        .filter(item => item.name && item.ticker)
     : [];
 
   const holdings = Array.isArray(raw?.holdings)
     ? raw.holdings
-        .map((item) => ({
+        .map(item => ({
           ticker: String(item?.ticker || '').trim().toUpperCase(),
           action: String(item?.action || '').trim().toUpperCase(),
           thesis: String(item?.thesis || '').trim(),
           createdAt: item?.createdAt || null,
         }))
-        .filter((item) => item.ticker)
+        .filter(item => item.ticker)
     : [];
 
-  const watch = raw?.decisionWatch && typeof raw.decisionWatch === 'object'
-    ? {
-        ticker: String(raw.decisionWatch.ticker || 'OKLO').toUpperCase(),
-        status: String(raw.decisionWatch.status || 'STALE').toUpperCase(),
-        estimatedRequiredJpy: Number(raw.decisionWatch.estimatedRequiredJpy),
-        stockPriceUsd: Number(raw.decisionWatch.stockPriceUsd),
-        usdJpy: Number(raw.decisionWatch.usdJpy),
-        updatedAt: raw.decisionWatch.updatedAt || null,
-        purchasedAt: raw.decisionWatch.purchasedAt || null,
-      }
-    : null;
-
-  return {
-    monthlyBudget: budget,
-    dream20,
-    holdings,
-    decisionWatch: watch,
-  };
+  return { availableAmount, dream20, holdings };
 }
 
-function toWatchLabel(watch, budget) {
-  if (!watch) return '未取得';
-  if (watch.purchasedAt) return '購入済み';
-  if (watch.status === 'READY') return '購入可能';
-  if (watch.status === 'WAITING') return '購入不可';
-  if (Number.isFinite(watch.estimatedRequiredJpy)) {
-    return watch.estimatedRequiredJpy <= budget ? '購入可能（推定）' : '購入不可（推定）';
-  }
-  return '確認中';
-}
-
-function buildFallbackAnswer(message, context) {
-  const budget = context.monthlyBudget;
-  const requested = parseAmountFromMessage(message, budget);
-  const useBudget = Math.min(requested || budget, budget);
-
-  const watch = context.decisionWatch;
-  const watchLabel = toWatchLabel(watch, budget);
-  const watchCost = Number.isFinite(watch?.estimatedRequiredJpy) ? formatYen(watch.estimatedRequiredJpy) : '未取得';
-  const watchPrice = Number.isFinite(watch?.stockPriceUsd) ? `${watch.stockPriceUsd.toFixed(2)} USD` : '未取得';
-  const watchFx = Number.isFinite(watch?.usdJpy) ? `${watch.usdJpy.toFixed(2)}円` : '未取得';
-
-  const affordableDream20 = context.dream20.filter((item) => {
-    const isStable = item.type === 'stable';
-    const isPositiveJudge = /買い候補|注目|保有継続/.test(item.judge);
-    return isStable || isPositiveJudge;
-  });
-
-  const dream20Head = affordableDream20.slice(0, 3).map((item) => `${item.name}(${item.ticker})`).join('、') || '候補抽出待ち';
-  const holdingHead = context.holdings.slice(0, 3).map((item) => item.ticker).join('、') || 'なし';
-
-  const conclusion = watchLabel === '購入可能'
-    ? `今月は上限${formatYen(budget)}の範囲で、まず1銘柄を少額で買う判断が妥当です。`
-    : `今月は上限${formatYen(budget)}を守り、無理な買いを避けて候補比較を優先する判断が妥当です。`;
-
-  const basis = `月上限は${formatYen(budget)}（相談金額: ${formatYen(useBudget)}）です。Dream20候補は${context.dream20.length}件あり、優先候補は${dream20Head}です。保有銘柄は${holdingHead}を参照し、Decision Watchは${watchLabel}（${watch?.ticker || 'OKLO'} 推定必要額: ${watchCost} / 株価: ${watchPrice} / USDJPY: ${watchFx}）です。`;
-
-  const risk = watchLabel === '購入可能'
-    ? '直近価格・為替は日次で変動するため、約定時に予算超過になる可能性があります。買値を追いかけず、上限超過時は見送りに切り替えてください。'
-    : 'Decision Watchが購入不可/確認中のときに感情で買うと、方針逸脱や高値づかみのリスクがあります。最新価格の再確認なしでの注文は避けてください。';
-
-  const action = watchLabel === '購入可能'
-    ? `今月は①優先候補から1銘柄に絞る ②${formatYen(useBudget)}以内で1回だけ発注する ③約定後は追い買いせず、次回判断日を決める。`
-    : `今月は①Decision Watchを更新して購入可否を再確認 ②Dream20の優先候補を最大2銘柄まで比較 ③今月は見送りも選択肢に含めて判断を固定する。`;
-
-  const journal = '記録する内容: (a) 買う/見送る結論 (b) 月上限との整合 (c) Dream20からその銘柄を選んだ理由 (d) 保有銘柄との重複リスク (e) 次に見直す価格・為替・条件。';
+function buildFallbackAnswer(context) {
+  const holdings = context.holdings.map(item => item.ticker).join('、') || '保有記録なし';
+  const candidates = context.dream20.slice(0, 3).map(item => `${item.name}(${item.ticker})`).join('、') || '候補抽出待ち';
 
   return [
-    '1. 結論',
-    conclusion,
+    '1. Portfolio Review',
+    `保有状況: ${holdings}。既存保有株は原則HOLDとし、短期の値動きだけでは売却を検討しません。`,
     '',
-    '2. 根拠',
-    basis,
+    '2. Business Quality',
+    '購入時の理由に照らし、事業の質・競争優位・収益力・成長余地に長期保有の前提を変える重大な変化がないか確認してください。',
     '',
-    '3. リスク',
-    risk,
+    '3. Opportunities',
+    `Dream20の比較候補: ${candidates}。新規候補は「話題だから」ではなく、既存保有株より長期的に魅力的かで比較します。`,
     '',
-    '4. 今月のおすすめアクション',
-    action,
+    '4. Valuation',
+    '良い会社を先に絞り、その後で現在価格が十分に魅力的かを確認します。株価下落そのものを買い理由にはしません。',
     '',
-    '5. Decision Journalへ残すべき内容',
-    journal,
+    '5. Capital Allocation',
+    `今月使えるお金は${formatYen(context.availableAmount)}です。選択肢は「既存株を買い増す」「新規銘柄を購入する」「現金で待つ」の3つです。良い機会がなければ現金で待つのが正常な判断です。`,
   ].join('\n');
 }
 
 function hasRequiredSections(answer) {
-  return REQUIRED_SECTIONS.every((section) => answer.includes(section));
+  return REQUIRED_SECTIONS.every(section => answer.includes(section));
 }
 
 function buildPrompt(message, context) {
-  const watch = context.decisionWatch;
-  const watchSummary = watch
-    ? {
-        ticker: watch.ticker,
-        status: toWatchLabel(watch, context.monthlyBudget),
-        estimatedRequiredJpy: Number.isFinite(watch.estimatedRequiredJpy) ? Math.round(watch.estimatedRequiredJpy) : null,
-        stockPriceUsd: Number.isFinite(watch.stockPriceUsd) ? watch.stockPriceUsd : null,
-        usdJpy: Number.isFinite(watch.usdJpy) ? watch.usdJpy : null,
-        updatedAt: watch.updatedAt,
-        purchasedAt: watch.purchasedAt,
-      }
-    : null;
-
-  const contextPayload = {
-    monthlyBudget: context.monthlyBudget,
-    dream20: context.dream20,
-    holdings: context.holdings,
-    decisionWatch: watchSummary,
+  const payload = {
     northStar: '投資判断を育てるアプリ',
     principles: [
       '情報は毎日更新する',
       '投資方針は簡単には変えない',
       '判断理由を記録する',
       '後から振り返って学ぶ',
+      '基本は長期保有で、売買する必要がなければ何もしない',
     ],
+    monthlyInvestmentMeeting: {
+      availableAmount: context.availableAmount,
+      holdings: context.holdings,
+      dream20: context.dream20,
+      normalChoices: ['既存株を買い増す', '新規銘柄を購入する', '現金で待つ'],
+      sellRule: 'SELLは通常の月次フローに含めず、長期保有の前提が崩れた場合のみ別途Investment Case Reviewで検討する',
+    },
   };
 
   return [
-    'あなたは Dream Fund Labs の投資相談パートナーです。',
-    'ユーザーの相談に対して「今月どう買う？」の意思決定支援を返してください。',
-    '北極星「投資判断を育てるアプリ」を守り、情報は日次更新を使ってよいが投資方針を勝手に変更しないでください。',
-    '回答は必ず次の5項目をこの順番・見出しで返してください。',
-    '1. 結論',
-    '2. 根拠',
-    '3. リスク',
-    '4. 今月のおすすめアクション',
-    '5. Decision Journalへ残すべき内容',
-    '簡潔に、断定し過ぎず、比較理由を含めてください。',
+    'あなたは Dream Fund Labs の長期投資向け Monthly Investment Meeting のパートナーです。',
+    'ウォーレン・バフェット、Terry Smith、Li Lu、Bill Ackmanに共通する長期・事業重視・慎重な資本配分の考え方を参考にしつつ、特定投資家の売買をコピーするよう勧めないでください。',
+    '短期株価を起点にせず、事業の質を見てから価格を評価してください。',
+    '既存保有株は原則HOLDです。重大な事業変化がなければSELLを提案しないでください。',
+    '「現金で待つ」を他の選択肢と同じ正式な判断として扱ってください。',
+    '回答は必ず以下の5見出しをこの順番で使ってください。',
+    ...REQUIRED_SECTIONS,
+    '各項目は簡潔に。最後のCapital Allocationでは、今月使えるお金の範囲で買い増し／新規購入／現金待ちを比較し、最有力を1つ示してください。',
     '',
-    `相談: ${message}`,
-    `参照情報(JSON): ${JSON.stringify(contextPayload)}`,
+    `ユーザーの相談: ${message}`,
+    `参照情報(JSON): ${JSON.stringify(payload)}`,
   ].join('\n');
 }
 
@@ -196,15 +118,12 @@ async function callOpenAI(prompt) {
     body: JSON.stringify({
       model: 'gpt-5-mini',
       input: prompt,
-      max_output_tokens: 900,
+      max_output_tokens: 1000,
     }),
   });
 
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error?.message || data?.error || 'openai request failed');
-  }
-
+  if (!response.ok) throw new Error(data?.error?.message || data?.error || 'openai request failed');
   return extractText(data);
 }
 
@@ -212,20 +131,21 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
   const { message, monthlyBudget, context: rawContext } = req.body || {};
-  if (!message || typeof message !== 'string') return res.status(400).json({ error: '相談内容を入力してください' });
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: '相談内容を入力してください' });
+  }
 
-  const budget = Number(monthlyBudget);
-  const safeBudget = Number.isFinite(budget) && budget > 0 ? Math.round(budget) : 5000;
-  const context = normalizeContext(rawContext, safeBudget);
-  const fallbackAnswer = buildFallbackAnswer(message, context);
+  const amount = Number(monthlyBudget);
+  const availableAmount = Number.isFinite(amount) && amount >= 0 ? Math.round(amount) : 5000;
+  const context = normalizeContext(rawContext, availableAmount);
+  const fallbackAnswer = buildFallbackAnswer(context);
 
   if (!process.env.OPENAI_API_KEY) {
     return res.status(200).json({ answer: fallbackAnswer, fallback: true });
   }
 
   try {
-    const prompt = buildPrompt(message, context);
-    const aiAnswer = await callOpenAI(prompt);
+    const aiAnswer = await callOpenAI(buildPrompt(message, context));
     const answer = aiAnswer && hasRequiredSections(aiAnswer) ? aiAnswer : fallbackAnswer;
     return res.status(200).json({ answer, fallback: answer === fallbackAnswer });
   } catch {
