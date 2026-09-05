@@ -3,7 +3,9 @@ const CARRYOVER_KEY = 'dfl-investment-carryover';
 const MEETINGS_KEY = 'dfl-monthly-investment-meetings';
 
 function readNumber(key, fallback = 0) {
-  const value = Number(localStorage.getItem(key));
+  const raw = localStorage.getItem(key);
+  if (raw === null || raw === '') return fallback;
+  const value = Number(raw);
   return Number.isFinite(value) && value >= 0 ? Math.round(value) : fallback;
 }
 
