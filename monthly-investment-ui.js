@@ -111,3 +111,82 @@ window.addEventListener('dfl-default-investment-updated', renderState);
 
 syncChoiceUI();
 renderState();
+
+
+const monthLabelEl = document.querySelector('#monthLabel');
+const holdingsEl = document.querySelector('#currentHoldings');
+const holdingEmptyEl = document.querySelector('#holdingEmpty');
+const holdingCountEl = document.querySelector('#holdingCount');
+const candidatesEl = document.querySelector('#monthlyCandidates');
+
+function renderPersonalizedSummary() {
+  const now = new Date();
+  if (monthLabelEl) monthLabelEl.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+
+  let decisions = [];
+  try {
+    decisions = JSON.parse(localStorage.getItem('dfl-decisions') || '[]');
+    if (!Array.isArray(decisions)) decisions = [];
+  } catch { decisions = []; }
+
+  const latestBuys = new Map();
+  for (const decision of decisions) {
+    if (decision?.action !== 'BUY' || !decision?.ticker) continue;
+    const previous = latestBuys.get(decision.ticker);
+    if (!previous || String(decision.createdAt || '') > String(previous.createdAt || '')) {
+      latestBuys.set(decision.ticker, decision);
+    }
+  }
+
+  const holdings = Array.from(latestBuys.values()).slice(0, 8);
+  if (holdingsEl) {
+    holdingsEl.innerHTML = '';
+    for (const holding of holdings) {
+      const article = document.createElement('article');
+      article.className = 'holding-card';
+      const title = document.createElement('strong');
+      title.textContent = holding.ticker;
+      const status = document.createElement('span');
+      status.textContent = '長期保有を継続';
+      const reason = document.createElement('p');
+      reason.textContent = holding.thesis || '購入時の理由を確認中です。';
+      article.append(title, status, reason);
+      holdingsEl.appendChild(article);
+    }
+  }
+  if (holdingCountEl) holdingCountEl.textContent = holdings.length ? `${holdings.length}銘柄` : '';
+  if (holdingEmptyEl) holdingEmptyEl.hidden = holdings.length > 0;
+
+  const stocks = Array.isArray(window.dream20Stocks) ? window.dream20Stocks : [];
+  const held = new Set(holdings.map(item => item.ticker));
+  const newCandidates = stocks.filter(stock => !held.has(stock.ticker)).slice(0, 2);
+  const addCandidate = stocks.find(stock => held.has(stock.ticker));
+  const candidates = [
+    ...(addCandidate ? [{ ...addCandidate, kind: '買い増し候補' }] : []),
+    ...newCandidates.map(stock => ({ ...stock, kind: '新しい候補' })),
+  ].slice(0, 3);
+
+  if (candidatesEl) {
+    candidatesEl.innerHTML = '';
+    for (const candidate of candidates) {
+      const article = document.createElement('article');
+      article.className = 'candidate-card';
+      const tag = document.createElement('span');
+      tag.textContent = candidate.kind;
+      const title = document.createElement('strong');
+      title.textContent = candidate.name;
+      const text = document.createElement('p');
+      text.textContent = candidate.why || '長期目線で比較したい候補です。';
+      article.append(tag, title, text);
+      candidatesEl.appendChild(article);
+    }
+    if (!candidates.length) {
+      const p = document.createElement('p');
+      p.className = 'quiet-note';
+      p.textContent = '今月の候補を整理中です。';
+      candidatesEl.appendChild(p);
+    }
+  }
+}
+
+renderPersonalizedSummary();
