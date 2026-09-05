@@ -19,8 +19,24 @@
   };
 
   function getMonthlyBudget(){
-    const monthlyBudget=Number(localStorage.getItem('dfl-monthly-budget'))||5000;
-    return Number.isFinite(monthlyBudget)&&monthlyBudget>0?monthlyBudget:5000;
+    const rawDefault=localStorage.getItem('dfl-monthly-budget');
+    const parsedDefault=Number(rawDefault);
+    const monthlyDefault=rawDefault===null||!Number.isFinite(parsedDefault)||parsedDefault<0?5000:Math.round(parsedDefault);
+    const carryover=Math.max(0,Number(localStorage.getItem('dfl-investment-carryover'))||0);
+    const now=new Date();
+    const month=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+    try{
+      const meetings=JSON.parse(localStorage.getItem('dfl-monthly-investment-meetings')||'{}');
+      const current=meetings?.[month];
+      if(current){
+        const remaining=Number(current.remainingAmount);
+        return Number.isFinite(remaining)&&remaining>=0?remaining:0;
+      }
+    }catch{}
+
+    const total=monthlyDefault+carryover;
+    return Number.isFinite(total)&&total>=0?Math.round(total):5000;
   }
 
   function getDream20(){
@@ -115,7 +131,7 @@
       answer.textContent=await askAI(text);
     }catch{
       const budget=getMonthlyBudget();
-      answer.textContent=`1. 結論\n今月は${budget.toLocaleString('ja-JP')}円の上限内で、候補を絞って少額で確認的に買う進め方が安全です。\n\n2. 根拠\n月上限を守ると無理な買いを避けやすく、Dream20・保有状況・購入可否を見ながら判断の質を保てます。\n\n3. リスク\n通信失敗中は最新の個別データ反映が不完全な可能性があります。最終的な注文前に価格と購入可否を再確認してください。\n\n4. 今月のおすすめアクション\n相談文に銘柄名と希望金額を追記して再送し、予算内での候補比較を確定しましょう。\n\n5. Decision Journalへ残すべき内容\n選んだ銘柄、判断理由、見送った理由、確認したリスク、次回の見直し条件。`;
+      answer.textContent=`1. Portfolio Review\n保有株は原則HOLDです。短期の値動きではなく、長期保有の前提に重大な変化があるかを確認します。\n\n2. Business Quality\n事業の質・競争優位・収益力・成長余地に構造的な変化がないか確認します。\n\n3. Opportunities\nDream20から、既存保有株より魅力的な投資機会があるか比較します。\n\n4. Valuation\n良い会社を絞った後で、現在価格が買いたい水準か確認します。\n\n5. Capital Allocation\n今月使えるお金は${budget.toLocaleString('ja-JP')}円です。買い増し／新規購入／現金で待つ、の3択で考えます。通信失敗中のため、確定前に最新情報を再確認してください。`;
     }finally{
       again.hidden=false;
       send.disabled=false;

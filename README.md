@@ -77,3 +77,19 @@ getDecisionsByTicker('AAPL');
 | `thesis`   | string         | 判断理由（必須）                   |
 | `risks`    | string[]       | リスク一覧（省略時は空配列）        |
 | `reviewDate`| string \| null | 振り返り予定日（省略時は null）    |
+
+## Monthly Investment Meeting
+
+Dream Fund Labs の月次判断は、長期投資を前提に次の5ステップで進めます。
+
+1. Portfolio Review
+2. Business Quality
+3. Opportunities
+4. Valuation
+5. Capital Allocation
+
+AIは情報を日次で更新しますが、ユーザーの投資判断は原則月1回です。既存保有株は基本HOLDとし、SELLは通常フローでは扱いません。
+
+Capital Allocationの「今月使えるお金」は、毎月のデフォルト投資額と前月までの未投資残高の合計です。未投資残高は翌月へ繰り越されます。
+
+通常の選択肢は「既存株を買い増す」「新規銘柄を購入する」「現金で待つ」の3つです。

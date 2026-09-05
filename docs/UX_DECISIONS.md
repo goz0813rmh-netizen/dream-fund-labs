@@ -94,3 +94,44 @@ Dream Fund LabsのDiscoveryで確定したUI/UX方針を記録する。
 - 投資相談チャットとサイト案内の役割を混ぜない
 
 将来、機能数が大幅に増え、ユーザーが迷う状態になった場合に再検討する。
+
+
+## 2026-09-05
+
+### 採用：Monthly Investment Meeting
+
+従来の「Monthly Consult / 今月、どう買う？」を、長期投資家向けの月1回の意思決定フロー「Monthly Investment Meeting」へ変更する。
+
+基本サイクルは「AIが毎日情報を更新 → ユーザーは月1回だけ判断 → それ以外は原則HOLD」とする。
+
+Monthly Investment Meetingは次の5ステップを固定順で進める。
+
+1. Portfolio Review — 保有株は原則HOLD。長期保有の前提に重大な変化がないか確認
+2. Business Quality — 事業の質、競争優位、収益力、成長余地を確認
+3. Opportunities — Dream20等から既存保有株より魅力的な機会があるか確認
+4. Valuation — 良い会社を絞った後で現在価格を評価
+5. Capital Allocation — 今月の新しい資金を配分
+
+SELLは通常の月次フローから外す。長期保有の前提が崩れた場合のみ、別の Investment Case Review で検討する。
+
+### 採用：今月使えるお金
+
+Capital Allocationで表示する金額は次の式で計算する。
+
+今月使えるお金 = 毎月のデフォルト投資額 + 前月までの投資後残高
+
+「現金で待つ」を正式な投資判断として扱い、未投資残高は全額翌月へ繰り越す。一部だけ投資した場合も残額を翌月へ繰り越す。
+
+同じ月にMonthly Investment Meetingを複数回開いても、毎月のデフォルト投資額を重複加算しない。月次判断を確定した時点でその月の資金配分を固定する。
+
+Capital Allocationの通常選択肢は以下の3つ。
+
+- 既存株を買い増す
+- 新規銘柄を購入する
+- 現金で待つ
+
+### 採用：著名長期投資家の扱い
+
+Berkshire Hathaway / Warren Buffett、Fundsmith / Terry Smith、Himalaya Capital / Li Lu、Pershing Square / Bill Ackman等の公開情報は、将来のOpportunitiesの発見材料として利用する。
+
+ただし売買のコピーは行わない。事業の質、理解可能性、競争優位、長期キャッシュ創出力、価格、資本配分などの考え方を参考にし、最終判断はDream Fund Labs内で独立して行う。
