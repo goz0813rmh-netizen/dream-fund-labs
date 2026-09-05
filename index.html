@@ -5,103 +5,126 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#0b1020"/>
   <title>Dream Fund Labs</title>
-  <link rel="stylesheet" href="styles.css?v=12"/>
+  <link rel="stylesheet" href="styles.css?v=13"/>
   <link rel="stylesheet" href="logos.css?v=1"/>
   <link rel="stylesheet" href="ui-fixes.css?v=1"/>
 </head>
 <body>
 <main class="app">
-  <header><div><p class="eyebrow">DREAM FUND LABS</p><h1>投資を、育てる。</h1></div></header>
+  <header class="main-header">
+    <div><p class="eyebrow">DREAM FUND LABS</p><h1>投資を、育てる。</h1></div>
+    <button id="openMenu" class="menu-button" aria-label="メニューを開く"><span></span><span></span><span></span></button>
+  </header>
 
-  <section class="consult-card meeting-card">
-    <div class="consult-head">
-      <div>
-        <p class="eyebrow">MONTHLY INVESTMENT MEETING</p>
-        <h2>月1回、長期目線で考える。</h2>
-      </div>
-      <button class="limit-chip" id="openBudget">
-        <span>毎月の投資額</span><strong id="budgetTotal">¥5,000</strong><b>✎</b>
-      </button>
+  <section class="monthly-page">
+    <div class="month-heading">
+      <p id="monthLabel" class="month-label"></p>
+      <h2>今月の投資</h2>
+      <p>保有株と新しい候補を最新情報で比べて、今月のお金をどうするか決めます。</p>
     </div>
-    <p class="consult-guide">情報は毎日更新。でも判断は急がない。保有企業を確認し、今月の新しいお金をどこに置くかだけ決めます。</p>
 
-    <ol class="meeting-steps" aria-label="Monthly Investment Meeting 5ステップ">
-      <li><span>1</span><div><strong>Portfolio Review</strong><p>保有株は原則HOLD。長期保有の前提に重大な変化がないか確認。</p></div></li>
-      <li><span>2</span><div><strong>Business Quality</strong><p>事業の質・競争優位・収益力・成長余地を確認。</p></div></li>
-      <li><span>3</span><div><strong>Opportunities</strong><p>Dream20から、今の保有株より魅力的な機会があるか確認。</p></div></li>
-      <li><span>4</span><div><strong>Valuation</strong><p>良い会社を絞った後で、今の価格で買いたいか確認。</p></div></li>
-      <li class="active"><span>5</span><div><strong>Capital Allocation</strong><p>買い増す、新規購入、現金で待つ。今月の資金配分を決める。</p></div></li>
-    </ol>
+    <section class="available-money">
+      <div><span>今月使えるお金</span><strong id="meetingAvailable">¥5,000</strong></div>
+      <p id="meetingBreakdown"></p>
+      <button id="openBudget" class="text-button">毎月の投資額を変更</button>
+    </section>
 
-    <section class="capital-allocation" aria-labelledby="allocationHeading">
-      <p class="eyebrow">CAPITAL ALLOCATION</p>
-      <h3 id="allocationHeading">今月使えるお金 <strong id="meetingAvailable">¥5,000</strong></h3>
-      <p id="meetingBreakdown" class="allocation-breakdown"></p>
+    <section class="monthly-section">
+      <div class="section-title"><h2>現在の保有株</h2><span id="holdingCount"></span></div>
+      <div id="currentHoldings" class="holding-list"></div>
+      <p id="holdingEmpty" class="quiet-note" hidden>まだ保有株の記録がありません。判断の記録から追加できます。</p>
+    </section>
+
+    <section class="monthly-section">
+      <div class="section-title"><h2>今月の候補</h2><span>あなた向け</span></div>
+      <div id="monthlyCandidates" class="candidate-list"></div>
+      <p class="quiet-note">候補は保有状況、これまでの判断、Dream20をもとに絞ります。良い機会がなければ、今月は買わないことも選べます。</p>
+    </section>
+
+    <section class="monthly-section decision-panel">
+      <div class="section-title"><h2>今月どうする？</h2></div>
       <p id="meetingStatus" class="allocation-status" hidden></p>
-
       <form id="allocationForm" class="allocation-form">
         <fieldset>
-          <legend>どう使う？</legend>
-          <label><input type="radio" name="allocationChoice" value="ADD_EXISTING"> 既存株を買い増す</label>
-          <label><input type="radio" name="allocationChoice" value="BUY_NEW"> 新規銘柄を購入する</label>
-          <label><input type="radio" name="allocationChoice" value="WAIT_CASH"> 現金で待つ</label>
+          <legend class="sr-only">今月の投資方針</legend>
+          <label><input type="radio" name="allocationChoice" value="ADD_EXISTING"> 持っている株を買い増す</label>
+          <label><input type="radio" name="allocationChoice" value="BUY_NEW"> 新しい株を買う</label>
+          <label><input type="radio" name="allocationChoice" value="WAIT_CASH"> 今月は買わない</label>
         </fieldset>
-        <label id="allocationTickerWrap" hidden>銘柄コード<input id="allocationTicker" type="text" autocomplete="off" placeholder="例: 9432 / SHIFT"></label>
-        <label id="allocationAmountWrap" hidden>実際の投資額<input id="allocationAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="例: 6500"></label>
-        <label>判断理由<textarea id="allocationReason" rows="3" placeholder="なぜ今月はこの資金配分にするか"></textarea></label>
-        <button id="allocationSubmit" type="submit">今月の判断を確定する</button>
+        <label id="allocationTickerWrap" hidden>買う銘柄<input id="allocationTicker" type="text" autocomplete="off" placeholder="例：9432"></label>
+        <label id="allocationAmountWrap" hidden>使う金額<input id="allocationAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="例：6500"></label>
+        <label>そう決めた理由<textarea id="allocationReason" rows="3" placeholder="自分が納得したポイントを一言でも残しておきましょう"></textarea></label>
+        <button id="allocationSubmit" type="submit">今月の方針を決める</button>
       </form>
       <p id="allocationSuccess" class="decision-success" hidden></p>
       <ul id="allocationErrors" class="decision-errors" hidden></ul>
     </section>
 
     <details class="meeting-consult">
-      <summary>AIと比較して考える</summary>
-      <p class="consult-guide">保有状況・Dream20・今月使えるお金を材料に、買い増し／新規／現金待ちを比較します。</p>
+      <summary>迷ったらAIと一緒に考える</summary>
+      <p class="quiet-note">今月使えるお金、現在の保有株、新しい候補をまとめて比較します。</p>
       <div class="consult-input-wrap">
-        <textarea id="consultInput" rows="3" placeholder="例：保有株と新規候補を長期目線で比較して"></textarea>
+        <textarea id="consultInput" rows="3" placeholder="例：買い増しと新しい株、今月はどちらがよさそう？"></textarea>
         <button id="sendConsult" aria-label="相談する">↑</button>
       </div>
       <div id="consultThread" class="consult-thread" hidden>
-        <div class="thread-label">今回の相談</div><div id="userMessage" class="message user-message"></div>
+        <div class="thread-label">あなた</div><div id="userMessage" class="message user-message"></div>
         <div class="thread-label">Dream Fund Labs</div><div id="assistantMessage" class="message assistant-message"><div class="thinking"><span></span><span></span><span></span></div></div>
         <button id="newConsult" class="new-consult">別の相談をする</button>
       </div>
     </details>
   </section>
 
-  <nav class="tabs">
-    <button class="tab active" data-filter="all">Dream20</button>
-    <button class="tab" data-filter="stable">安定</button>
-    <button class="tab" data-filter="growth">成長</button>
-    <button class="tab" data-filter="leap">飛躍</button>
-  </nav>
+  <section id="dream20Section" class="library-section">
+    <nav class="tabs">
+      <button class="tab active" data-filter="all">Dream20</button>
+      <button class="tab" data-filter="stable">安定</button>
+      <button class="tab" data-filter="growth">成長</button>
+      <button class="tab" data-filter="leap">飛躍</button>
+    </nav>
+    <div class="section-title"><h2>銘柄一覧</h2><span id="count"></span></div><div id="stockList" class="stock-list"></div>
+  </section>
 
-  <section><div class="section-title"><h2>銘柄一覧</h2><span id="count"></span></div><div id="stockList" class="stock-list"></div></section>
-
-  <section class="decision-journal-section">
-    <div class="section-title"><h2>判断を記録する</h2><span>Decision Journal</span></div>
+  <section id="journalSection" class="decision-journal-section">
+    <div class="section-title"><h2>判断を記録する</h2><span>記録</span></div>
     <form id="decisionForm" class="decision-form" novalidate>
-      <label>銘柄コード<input id="decisionTicker" name="ticker" type="text" autocomplete="off" placeholder="例: AAPL" required></label>
-      <label>行動<select id="decisionAction" name="action"><option value="BUY">BUY</option><option value="SELL">SELL</option><option value="HOLD">HOLD</option><option value="WATCH">WATCH</option></select></label>
-      <label>判断理由<textarea id="decisionThesis" name="thesis" rows="3" placeholder="なぜこの判断にしたか" required></textarea></label>
-      <label>リスク<textarea id="decisionRisks" name="risks" rows="2" placeholder="1行1件 または カンマ区切り"></textarea></label>
-      <label>振り返り予定日（任意）<input id="decisionReviewDate" name="reviewDate" type="date"></label>
+      <label>銘柄コード<input id="decisionTicker" name="ticker" type="text" autocomplete="off" placeholder="例：9432" required></label>
+      <label>行動<select id="decisionAction" name="action"><option value="BUY">買う</option><option value="SELL">売る</option><option value="HOLD">持ち続ける</option><option value="WATCH">気になる</option></select></label>
+      <label>判断理由<textarea id="decisionThesis" name="thesis" rows="3" placeholder="なぜそう考えたか" required></textarea></label>
+      <label>気になること<textarea id="decisionRisks" name="risks" rows="2" placeholder="1行1件 または カンマ区切り"></textarea></label>
+      <label>次に振り返る日（任意）<input id="decisionReviewDate" name="reviewDate" type="date"></label>
       <button id="decisionSubmit" type="submit">保存する</button>
     </form>
     <p id="decisionSuccess" class="decision-success" hidden></p><ul id="decisionErrors" class="decision-errors" hidden></ul>
   </section>
 
   <section class="decision-history-section">
-    <div class="section-title"><h2>判断履歴</h2><span id="decisionCount">0件</span></div>
-    <p id="decisionEmpty" class="decision-empty">まだ記録がありません。最初の判断理由を残してみましょう。</p>
+    <div class="section-title"><h2>これまでの判断</h2><span id="decisionCount">0件</span></div>
+    <p id="decisionEmpty" class="decision-empty">まだ記録がありません。</p>
     <div id="decisionList" class="decision-list" hidden></div>
   </section>
 </main>
 
+<div id="menuBackdrop" class="menu-backdrop" hidden></div>
+<aside id="sideMenu" class="side-menu" aria-hidden="true">
+  <div class="side-menu-head"><strong>メニュー</strong><button id="closeMenu" aria-label="メニューを閉じる">×</button></div>
+  <nav>
+    <button data-target="top">今月の投資</button>
+    <button id="openLearn">投資を学ぶ <span>今のあなた向け</span></button>
+    <button data-target="journalSection">判断の記録</button>
+    <button data-target="dream20Section">Dream20</button>
+    <button id="menuBudget">設定</button>
+  </nav>
+</aside>
+
+<dialog id="learnModal" class="learn-modal">
+  <div class="modal-head"><div><p class="eyebrow">今のあなたにおすすめ</p><h2>投資を学ぶ</h2></div><button id="closeLearn">×</button></div>
+  <div id="learningTopics" class="learning-topics"></div>
+</dialog>
+
 <dialog id="budgetModal">
-  <div class="modal-head"><div><p class="eyebrow">MONTHLY DEFAULT</p><h2>毎月の投資額</h2></div><button id="closeBudget">×</button></div>
-  <p class="budget-help">毎月追加するデフォルト投資額です。前月までの未投資残高は自動で繰り越します。</p>
+  <div class="modal-head"><div><p class="eyebrow">設定</p><h2>毎月の投資額</h2></div><button id="closeBudget">×</button></div>
+  <p class="budget-help">毎月追加する金額です。使わなかったお金は翌月へ自動で繰り越します。</p>
   <div class="single-wheel-wrap"><div class="wheel" id="budgetWheel"></div><div class="wheel-highlight"></div></div>
   <div class="budget-direct"><span>金額を直接入力</span><label><b>¥</b><input id="budgetInput" type="text" inputmode="numeric" autocomplete="off" placeholder="例 10000"></label></div>
   <div class="budget-modal-total"><span>毎月の投資額</span><strong id="editTotal"></strong></div>
@@ -111,19 +134,19 @@
 <dialog id="detailModal">
   <div class="modal-head"><div><p id="detailTicker" class="eyebrow"></p><h2 id="detailName"></h2></div><button id="closeModal">×</button></div>
   <div id="detailBadge" class="badge"></div><div class="dd-lead"><p id="detailSummary"></p></div>
-  <section class="dd"><h3>① どうやって稼ぐ会社？</h3><p id="detailBusiness"></p></section>
-  <section class="dd"><h3>② 強みは何？</h3><p id="detailMoat"></p></section>
-  <section class="dd"><h3>③ 成長してる？</h3><p id="detailGrowth"></p></section>
-  <section class="dd"><h3>④ 数字で見る</h3><div id="detailMetrics" class="metrics"></div><p class="note">※ 数値はDD更新時点の目安。買う前に最新決算で再確認。</p></section>
-  <section class="dd"><h3>⑤ これから見るポイント</h3><p id="detailPoint"></p></section>
-  <section class="dd"><h3>⑥ 主なリスク</h3><p id="detailRisk"></p></section>
-  <section class="dd verdict"><h3>⑦ 結論</h3><p id="detailWhy"></p><div class="judgement"><span>いまの判断</span><strong id="detailJudge"></strong></div></section>
-  <section class="dd record-lead"><p class="record-lead-text">DDを読んで考えたことを、自分の言葉で残します。</p><button id="recordJudgement" class="record-judgement-btn">この銘柄の判断を記録する</button></section>
+  <section class="dd"><h3>どんな会社？</h3><p id="detailBusiness"></p></section>
+  <section class="dd"><h3>強み</h3><p id="detailMoat"></p></section>
+  <section class="dd"><h3>成長</h3><p id="detailGrowth"></p></section>
+  <section class="dd"><h3>数字</h3><div id="detailMetrics" class="metrics"></div><p class="note">※ 数値は更新時点の目安。買う前に最新決算で再確認。</p></section>
+  <section class="dd"><h3>これから見ること</h3><p id="detailPoint"></p></section>
+  <section class="dd"><h3>気になること</h3><p id="detailRisk"></p></section>
+  <section class="dd verdict"><h3>いまの見方</h3><p id="detailWhy"></p><div class="judgement"><span>現在</span><strong id="detailJudge"></strong></div></section>
+  <section class="dd record-lead"><button id="recordJudgement" class="record-judgement-btn">この銘柄の判断を記録する</button></section>
 </dialog>
 
-<script src="app.js?v=11"></script>
-<script src="consult-v2.js?v=7"></script>
-<script type="module" src="monthly-investment-ui.js?v=1"></script>
+<script src="app.js?v=12"></script>
+<script src="consult-v2.js?v=8"></script>
+<script type="module" src="monthly-investment-ui.js?v=2"></script>
 <script type="module" src="decision-journal-ui.js?v=1"></script>
 </body>
 </html>
