@@ -107,5 +107,7 @@ form?.addEventListener('submit', event => {
   window.dispatchEvent(new CustomEvent('dfl-monthly-meeting-finalized', { detail: meeting }));
 });
 
+window.addEventListener('dfl-default-investment-updated', renderState);
+
 syncChoiceUI();
 renderState();
